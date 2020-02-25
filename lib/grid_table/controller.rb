@@ -1,20 +1,22 @@
 module GridTable
   module Controller
     def grid_table_for(resource, params, options = {})
-      grid_table = resource.grid_table
-      grid_table.populate!(resource, params, options)
+      Multidb.use(:slave) do
+        grid_table = resource.grid_table
+        grid_table.populate!(resource, params, options)
 
-      if block_given?
-        yield grid_table.records, grid_table.total_rows
-      else
-        rows = []
+        if block_given?
+          yield grid_table.records, grid_table.total_rows
+        else
+          rows = []
 
-        local = options[:local].try(:to_sym) || grid_table.records.klass.name.demodulize.underscore.to_sym
-        grid_table.records.each do |record|
-          rows << (render_to_string partial: (options[:partial] || 'row'), locals: { local => record })
+          local = options[:local].try(:to_sym) || grid_table.records.klass.name.demodulize.underscore.to_sym
+          grid_table.records.each do |record|
+            rows << (render_to_string partial: (options[:partial] || 'row'), locals: { local => record })
+          end
+
+          render json: { total_rows: grid_table.total_rows, rows: rows }
         end
-
-        render json: { total_rows: grid_table.total_rows, rows: rows }
       end
     end
 
